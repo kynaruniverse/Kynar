@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Base Styles */
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+  
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* World Theme Classes */
+@layer components {
+  /* Home Haven Theme */
+  .world-haven {
+    --world-accent: #9CCAA0;
+    --world-bg: #F5EFE6;
+    --world-text: #2F2F2F;
+    --world-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --world-radius: 0.75rem;
+    --world-transition: 150ms ease-in-out;
+  }
+  
+  /* Tools Realm Theme */
+  .world-tools {
+    --world-accent: #22D3EE;
+    --world-bg: #F8FAFC;
+    --world-text: #0F172A;
+    --world-shadow: none;
+    --world-radius: 0.375rem;
+    --world-transition: 150ms ease-in-out;
+  }
+  
+  /* Lifestyle Oasis Theme */
+  .world-oasis {
+    --world-accent: #A8E6CF;
+    --world-bg: #FAF7F0;
+    --world-text: #2F2F2F;
+    --world-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --world-radius: 0.75rem;
+    --world-transition: 150ms ease-in-out;
+  }
+  
+  /* Creative Nexus Theme */
+  .world-nexus {
+    --world-accent: #9B5DE5;
+    --world-bg: #F9F9F9;
+    --world-text: #0D0221;
+    --world-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --world-radius: 0.75rem;
+    --world-transition: 150ms ease-in-out;
+  }
+  
+  /* Base Card Component */
+  .base-card {
+    @apply bg-white transition-all duration-150 ease-in-out border border-gray-100 p-4;
+    border-radius: var(--world-radius);
+    box-shadow: var(--world-shadow);
+  }
+  
+  /* Base Button Component */
+  .base-button {
+    @apply rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-150 active:scale-95;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Secondary Button */
+  .secondary-button {
+    @apply base-button border border-current bg-transparent transition-colors hover:bg-black/5;
+  }
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Touch Target Minimum Size (Accessibility) */
+button, a {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
