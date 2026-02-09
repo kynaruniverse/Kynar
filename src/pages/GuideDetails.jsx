@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getWorldBySlug } from '../constants/worlds'
+import { useAuth } from '../contexts/AuthContext'
 
 const GuideDetails = () => {
   const { worldName, guideId } = useParams()
   const navigate = useNavigate()
   const world = getWorldBySlug(worldName)
+  const { user } = useAuth()
 
   const [guide, setGuide] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -15,7 +17,7 @@ const GuideDetails = () => {
 
   useEffect(() => {
     fetchGuide()
-  }, [guideId])
+  }, [guideId, user])
 
   const fetchGuide = async () => {
     setLoading(true)
@@ -29,9 +31,12 @@ const GuideDetails = () => {
       if (error) throw error
       setGuide(data)
 
-      // TODO Phase 4: Check if current user has bookmarked this guide
-      // For now, check if guide has any bookmarks (demo purposes)
-      setIsBookmarked(data.bookmarked_by && data.bookmarked_by.length > 0)
+      // Check if current user has bookmarked this guide
+      if (user && data.bookmarked_by) {
+        setIsBookmarked(data.bookmarked_by.includes(user.id))
+      } else {
+        setIsBookmarked(false)
+      }
     } catch (error) {
       console.error('Error fetching guide:', error)
     } finally {
@@ -40,22 +45,23 @@ const GuideDetails = () => {
   }
 
   const handleBookmark = async () => {
+    if (!user) {
+      alert('Please sign in to bookmark guides!')
+      return
+    }
+
     setBookmarkLoading(true)
-    
-    // TODO Phase 4: Get actual user ID from authentication
-    // For demo, we'll use a placeholder user ID
-    const demoUserId = '00000000-0000-0000-0000-000000000001'
 
     try {
       let updatedBookmarks = [...(guide.bookmarked_by || [])]
 
       if (isBookmarked) {
         // Remove bookmark
-        updatedBookmarks = updatedBookmarks.filter(id => id !== demoUserId)
+        updatedBookmarks = updatedBookmarks.filter(id => id !== user.id)
       } else {
         // Add bookmark
-        if (!updatedBookmarks.includes(demoUserId)) {
-          updatedBookmarks.push(demoUserId)
+        if (!updatedBookmarks.includes(user.id)) {
+          updatedBookmarks.push(user.id)
         }
       }
 

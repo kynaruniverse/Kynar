@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const GuideCard = ({ guide, world }) => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
 
   useEffect(() => {
-    // Check if guide is bookmarked
-    if (guide.bookmarked_by && guide.bookmarked_by.length > 0) {
-      setIsBookmarked(true)
+    // Check if guide is bookmarked by current user
+    if (user && guide.bookmarked_by) {
+      setIsBookmarked(guide.bookmarked_by.includes(user.id))
+    } else {
+      setIsBookmarked(false)
     }
-  }, [guide])
+  }, [guide, user])
 
   const handleReadGuide = () => {
     navigate(`/worlds/${world.slug}/guides/${guide.id}`)
@@ -20,19 +24,22 @@ const GuideCard = ({ guide, world }) => {
 
   const handleBookmark = async (e) => {
     e.stopPropagation()
-    setBookmarkLoading(true)
     
-    // TODO Phase 4: Get actual user ID from authentication
-    const demoUserId = '00000000-0000-0000-0000-000000000001'
+    if (!user) {
+      alert('Please sign in to bookmark guides!')
+      return
+    }
+
+    setBookmarkLoading(true)
 
     try {
       let updatedBookmarks = [...(guide.bookmarked_by || [])]
 
       if (isBookmarked) {
-        updatedBookmarks = updatedBookmarks.filter(id => id !== demoUserId)
+        updatedBookmarks = updatedBookmarks.filter(id => id !== user.id)
       } else {
-        if (!updatedBookmarks.includes(demoUserId)) {
-          updatedBookmarks.push(demoUserId)
+        if (!updatedBookmarks.includes(user.id)) {
+          updatedBookmarks.push(user.id)
         }
       }
 
