@@ -2,19 +2,23 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getWorldBySlug } from '../constants/worlds'
+import { useAuth } from '../contexts/AuthContext'
+import { simulatePurchase, userOwnsProduct } from '../lib/lemonsqueezy'
 
 const ProductDetails = () => {
   const { worldName, productId } = useParams()
   const navigate = useNavigate()
   const world = getWorldBySlug(worldName)
+  const { user } = useAuth()
 
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isPurchased, setIsPurchased] = useState(false)
+  const [purchasing, setPurchasing] = useState(false)
 
   useEffect(() => {
     fetchProduct()
-  }, [productId])
+  }, [productId, user])
 
   const fetchProduct = async () => {
     setLoading(true)
@@ -28,9 +32,11 @@ const ProductDetails = () => {
       if (error) throw error
       setProduct(data)
 
-      // TODO Phase 4: Check if user has purchased this product
-      // For now, randomly simulate some purchases for demo
-      setIsPurchased(Math.random() > 0.7)
+      // Check if user owns this product
+      if (user) {
+        const owns = await userOwnsProduct(user.id, productId, supabase)
+        setIsPurchased(owns)
+      }
     } catch (error) {
       console.error('Error fetching product:', error)
     } finally {
@@ -38,14 +44,39 @@ const ProductDetails = () => {
     }
   }
 
-  const handlePurchase = () => {
-    // TODO Phase 4: Implement Lemon Squeezy checkout
-    alert('Purchase functionality will be implemented in Phase 4 with Lemon Squeezy!')
+  const handlePurchase = async () => {
+    if (!user) {
+      alert('Please sign in to purchase products!')
+      return
+    }
+
+    setPurchasing(true)
+
+    try {
+      // DEMO MODE: Simulate purchase
+      // In production, this would redirect to Lemon Squeezy checkout
+      const result = await simulatePurchase(productId, user.id, supabase)
+
+      if (result.success) {
+        alert('🎉 Purchase successful! Product added to your library.')
+        setIsPurchased(true)
+        
+        // Refresh to update UI
+        await fetchProduct()
+      } else {
+        throw new Error('Purchase failed')
+      }
+    } catch (error) {
+      console.error('Purchase error:', error)
+      alert('Purchase failed. Please try again.')
+    } finally {
+      setPurchasing(false)
+    }
   }
 
   const handleDownload = () => {
-    // TODO Phase 4: Generate signed URL for download
-    alert('Download functionality will be implemented in Phase 4!')
+    // TODO: Generate signed URL for actual file download
+    alert('🎉 Your product is ready!\n\nIn production, this would download the actual file.\n\nFor now, this is a demo showing the download flow works.')
   }
 
   if (loading) {
@@ -197,13 +228,18 @@ const ProductDetails = () => {
                 ) : (
                   <button
                     onClick={handlePurchase}
-                    className="w-full base-button text-lg py-4"
+                    disabled={purchasing || !user}
+                    className="w-full base-button text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ 
                       backgroundColor: world.colors.accent,
                       color: '#FFFFFF'
                     }}
                   >
-                    Buy Now - {formatPrice(product.price)}
+                    {purchasing 
+                      ? 'Processing...' 
+                      : !user 
+                        ? 'Sign In to Purchase' 
+                        : `Buy Now - ${formatPrice(product.price)}`}
                   </button>
                 )}
               </div>
