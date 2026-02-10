@@ -44,6 +44,14 @@ const Navbar = () => {
             <div className="flex items-center gap-4">
               {user ? (
                 <>
+                  {/* Social Feed Link */}
+                  <button
+                    onClick={() => navigate('/social')}
+                    className="text-sm font-medium text-gray-700 hover:text-gray-900 active:scale-95 transition-all"
+                  >
+                    Social
+                  </button>
+
                   {/* Library Link */}
                   <button
                     onClick={() => navigate('/library')}
