@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@contexts/AuthContext'
+import { X, Mail, Lock, User, Loader2, ArrowRight } from 'lucide-react'
+import { clsx } from 'clsx'
 
 const AuthModal = ({ isOpen, onClose, defaultMode = 'signin' }) => {
-  const [mode, setMode] = useState(defaultMode) // 'signin' or 'signup'
+  const [mode, setMode] = useState(defaultMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -20,22 +22,20 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'signin' }) => {
 
     try {
       if (mode === 'signup') {
-        if (!username) {
-          setError('Username is required')
-          setLoading(false)
-          return
-        }
-        const { error } = await signUp(email, password, username)
-        if (error) throw error
-        alert('Account created! Please check your email to verify your account.')
+        if (!username) throw new Error('Username is required')
+        
+        const { error: signUpError } = await signUp(email, password, username)
+        if (signUpError) throw signUpError
+        
+        alert('Verification email sent! Please check your inbox.')
         onClose()
       } else {
-        const { error } = await signIn(email, password)
-        if (error) throw error
+        const { error: signInError } = await signIn(email, password)
+        if (signInError) throw signInError
         onClose()
       }
-    } catch (error) {
-      setError(error.message)
+    } catch (err) {
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -47,29 +47,32 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'signin' }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-[200] animate-in fade-in duration-300">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 md:p-10 relative border border-white/20">
+        
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
+          className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all"
         >
-          ×
+          <X size={20} />
         </button>
 
         {/* Header */}
-        <h2 className="text-3xl font-bold mb-2">
-          {mode === 'signin' ? 'Welcome Back' : 'Create Account'}
-        </h2>
-        <p className="text-gray-600 mb-6">
-          {mode === 'signin' 
-            ? 'Sign in to access your library and purchases' 
-            : 'Join to start building your collection'}
-        </p>
+        <div className="mb-8">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter mb-2">
+            {mode === 'signin' ? 'Welcome Back' : 'Join the Multiverse'}
+          </h2>
+          <p className="text-slate-500 font-medium">
+            {mode === 'signin' 
+              ? 'Access your library and saved guides.' 
+              : 'Create an account to start your collection.'}
+          </p>
+        </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-xs font-bold uppercase tracking-tight">
             {error}
           </div>
         )}
@@ -77,69 +80,84 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'signin' }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                 Username
               </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="johndoe"
-                required={mode === 'signup'}
-              />
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                  placeholder="explorer_2026"
+                  required={mode === 'signup'}
+                />
+              </div>
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Email Address
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="you@example.com"
-              required
-            />
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                placeholder="you@nexus.com"
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="••••••••"
-              required
-              minLength={6}
-            />
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                placeholder="••••••••"
+                required
+                minLength={6}
+              />
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-slate-200 hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4"
           >
-            {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {loading ? (
+              <Loader2 className="animate-spin" size={24} />
+            ) : (
+              <>
+                {mode === 'signin' ? 'Sign In' : 'Get Started'}
+                <ArrowRight size={20} />
+              </>
+            )}
           </button>
         </form>
 
         {/* Switch Mode */}
-        <div className="mt-6 text-center text-sm">
-          <span className="text-gray-600">
-            {mode === 'signin' ? "Don't have an account? " : "Already have an account? "}
-          </span>
+        <div className="mt-8 text-center">
           <button
             onClick={switchMode}
-            className="text-blue-600 font-medium hover:underline"
+            className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors"
           >
-            {mode === 'signin' ? 'Sign up' : 'Sign in'}
+            {mode === 'signin' 
+              ? "Don't have an account? Create one" 
+              : "Already have an account? Sign in"}
           </button>
         </div>
       </div>

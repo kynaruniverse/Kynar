@@ -1,122 +1,95 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { createContext, useContext, useState, useEffect, useMemo } from 'react'
+import { supabase } from '@lib/supabase'
+import { userService } from '@services/userService'
 
-const AuthContext = createContext({})
+const AuthContext = createContext(null)
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider')
   return context
 }
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+  /**
+   * Orchestrates profile fetching and local state sync
+   */
+  const syncUserProfile = async (userId) => {
+    if (!userId) {
+      setProfile(null)
+      return
+    }
+    const { data } = await userService.getUserProfile(userId)
+    setProfile(data)
+  }
 
-    // Listen for changes on auth state (login, logout, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+  useEffect(() => {
+    // 1. Initialize Session
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+      if (currentUser) await syncUserProfile(currentUser.id)
+      setLoading(false)
+    }
+
+    initSession()
+
+    // 2. Listen for Auth Changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+      
+      if (event === 'SIGNED_IN') {
+        await syncUserProfile(currentUser?.id)
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null)
+      }
+      
       setLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  // Sign up with email and password
-  const signUp = async (email, password, username) => {
-    try {
+  const authActions = {
+    signUp: async (email, password, username) => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            username: username,
-          }
-        }
+        options: { data: { username } }
       })
 
-      if (error) throw error
-
-      // Create user profile in users table
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert([
-            {
-              id: data.user.id,
-              username: username,
-              email: email,
-            }
-          ])
-
-        if (profileError) throw profileError
+      if (!error && data.user) {
+        // Use our service layer instead of direct DB calls here
+        await userService.createProfile(data.user.id, email, username)
       }
+      return { data, error }
+    },
 
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
-    }
+    signIn: async (email, password) => {
+      return await supabase.auth.signInWithPassword({ email, password })
+    },
+
+    signOut: async () => {
+      return await supabase.auth.signOut()
+    },
+
+    // Refresh the local profile state (e.g., after a purchase)
+    refreshProfile: () => syncUserProfile(user?.id)
   }
 
-  // Sign in with email and password
-  const signIn = async (email, password) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
-    }
-  }
-
-  // Sign out
-  const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      return { error: null }
-    } catch (error) {
-      return { error }
-    }
-  }
-
-  // Get user profile from users table
-  const getUserProfile = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
-    }
-  }
-
-  const value = {
+  // Memoize value to prevent unnecessary re-renders of children
+  const value = useMemo(() => ({
     user,
+    profile,
     loading,
-    signUp,
-    signIn,
-    signOut,
-    getUserProfile,
-  }
+    ...authActions
+  }), [user, profile, loading])
 
   return (
     <AuthContext.Provider value={value}>

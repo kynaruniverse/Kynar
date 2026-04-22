@@ -1,264 +1,179 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { getWorldBySlug } from '../constants/worlds'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@contexts/AuthContext'
+import { contentService } from '@services/contentService'
+import { getWorldBySlug } from '@constants/worlds'
+import { 
+  ArrowLeft, 
+  Bookmark, 
+  BookmarkCheck, 
+  Loader2, 
+  Calendar, 
+  Users, 
+  Package, 
+  Share2 
+} from 'lucide-react'
+import { clsx } from 'clsx'
 
 const GuideDetails = () => {
   const { worldName, guideId } = useParams()
   const navigate = useNavigate()
-  const world = getWorldBySlug(worldName)
   const { user } = useAuth()
+  const world = getWorldBySlug(worldName)
 
   const [guide, setGuide] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [isBookmarked, setIsBookmarked] = useState(false)
   const [bookmarkLoading, setBookmarkLoading] = useState(false)
 
+  // Derived state: Check if user is in the bookmarked_by array
+  const isBookmarked = user && guide?.bookmarked_by?.includes(user.id)
+
   useEffect(() => {
-    fetchGuide()
-  }, [guideId, user])
-
-  const fetchGuide = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('guides')
-        .select('*')
-        .eq('id', guideId)
-        .single()
-
-      if (error) throw error
-      setGuide(data)
-
-      // Check if current user has bookmarked this guide
-      if (user && data.bookmarked_by) {
-        setIsBookmarked(data.bookmarked_by.includes(user.id))
-      } else {
-        setIsBookmarked(false)
-      }
-    } catch (error) {
-      console.error('Error fetching guide:', error)
-    } finally {
+    const fetchData = async () => {
+      setLoading(true)
+      // We can use a simple supabase query here or add getGuideById to contentService
+      const { data, error } = await contentService.getWorldContent(world.name)
+      const currentGuide = data.guides.find(g => g.id === guideId)
+      
+      if (currentGuide) setGuide(currentGuide)
       setLoading(false)
     }
-  }
+    fetchData()
+  }, [guideId, world.name])
 
   const handleBookmark = async () => {
-    if (!user) {
-      alert('Please sign in to bookmark guides!')
-      return
-    }
-
+    if (!user) return alert('Please sign in to bookmark guides!')
+    
     setBookmarkLoading(true)
+    const result = await contentService.toggleBookmark(
+      guide.id, 
+      user.id, 
+      guide.bookmarked_by || []
+    )
 
-    try {
-      let updatedBookmarks = [...(guide.bookmarked_by || [])]
-
-      if (isBookmarked) {
-        // Remove bookmark
-        updatedBookmarks = updatedBookmarks.filter(id => id !== user.id)
-      } else {
-        // Add bookmark
-        if (!updatedBookmarks.includes(user.id)) {
-          updatedBookmarks.push(user.id)
-        }
-      }
-
-      const { error } = await supabase
-        .from('guides')
-        .update({ bookmarked_by: updatedBookmarks })
-        .eq('id', guideId)
-
-      if (error) throw error
-
-      setIsBookmarked(!isBookmarked)
-      setGuide({ ...guide, bookmarked_by: updatedBookmarks })
-    } catch (error) {
-      console.error('Error toggling bookmark:', error)
-      alert('Failed to update bookmark. Please try again.')
-    } finally {
-      setBookmarkLoading(false)
+    if (result.success) {
+      // Optimistically update the local state array
+      const updatedArray = isBookmarked
+        ? guide.bookmarked_by.filter(id => id !== user.id)
+        : [...(guide.bookmarked_by || []), user.id]
+      
+      setGuide({ ...guide, bookmarked_by: updatedArray })
     }
+    setBookmarkLoading(false)
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div 
-          className="inline-block w-12 h-12 border-4 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: world?.colors.accent, borderTopColor: 'transparent' }}
-        ></div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <Loader2 className="animate-spin text-slate-400" size={40} />
+    </div>
+  )
 
-  if (!guide || !world) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Guide Not Found</h1>
-          <button 
-            onClick={() => navigate(`/worlds/${worldName}`)}
-            className="base-button bg-gray-900 text-white"
-          >
-            ← Back to {worldName}
-          </button>
-        </div>
-      </div>
-    )
-  }
+  if (!guide || !world) return <div className="p-20 text-center font-bold">Guide not found.</div>
 
   return (
-    <div className={`min-h-screen ${world.themeClass}`} style={{ backgroundColor: world.colors.base }}>
-      {/* Header */}
-      <header className="p-4 md:p-8 border-b" style={{ borderColor: world.colors.accent + '20' }}>
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
+    <div className="min-h-screen pb-20" style={{ backgroundColor: world.colors.base }}>
+      {/* Header / Navigation */}
+      <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-black/5 px-6 py-4">
+        <div className="max-w-5xl mx-auto flex justify-between items-center">
           <button
-            onClick={() => navigate(`/worlds/${worldName}`)}
-            className="base-button bg-white/50 hover:bg-white/80"
-            style={{ color: world.colors.text }}
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 font-bold text-slate-600 hover:text-slate-900 transition-all"
           >
-            ← Back to {world.name}
+            <ArrowLeft size={20} /> Back to {world.name}
           </button>
 
-          {/* Bookmark Button */}
           <button
             onClick={handleBookmark}
             disabled={bookmarkLoading}
-            className="base-button px-6 flex items-center gap-2"
-            style={{ 
-              backgroundColor: isBookmarked ? world.colors.accent : 'transparent',
-              border: `2px solid ${world.colors.accent}`,
-              color: isBookmarked ? '#FFFFFF' : world.colors.accent
-            }}
+            className={clsx(
+              "flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold transition-all active:scale-95 border-2",
+              isBookmarked 
+                ? "bg-slate-900 border-slate-900 text-white" 
+                : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+            )}
+            style={isBookmarked ? { backgroundColor: world.colors.accent, borderColor: world.colors.accent } : {}}
           >
-            <span className="text-xl">
-              {bookmarkLoading ? '⏳' : isBookmarked ? '🔖' : '📑'}
-            </span>
-            <span>{isBookmarked ? 'Bookmarked' : 'Bookmark'}</span>
+            {bookmarkLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : isBookmarked ? (
+              <BookmarkCheck size={18} />
+            ) : (
+              <Bookmark size={18} />
+            )}
+            <span>{isBookmarked ? 'Saved' : 'Save Guide'}</span>
           </button>
         </div>
-      </header>
+      </nav>
 
-      {/* Guide Content */}
-      <main className="p-4 md:p-8">
-        <article className="max-w-4xl mx-auto">
-          {/* Category Badge */}
-          {guide.category && (
-            <div className="mb-6">
-              <span 
-                className="inline-block px-4 py-2 rounded-full text-sm font-medium"
-                style={{ 
-                  backgroundColor: world.colors.accent + '20',
-                  color: world.colors.text 
-                }}
-              >
-                {guide.category}
-              </span>
-            </div>
-          )}
-
-          {/* Title */}
-          <h1 
-            className={`text-4xl md:text-5xl font-bold mb-8 ${world.fontFamily}`}
-            style={{ color: world.colors.text }}
+      <main className="max-w-4xl mx-auto px-6 pt-16">
+        {/* Category & Meta */}
+        <div className="flex flex-wrap items-center gap-4 mb-8">
+          <span 
+            className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest"
+            style={{ backgroundColor: `${world.colors.accent}20`, color: world.colors.text }}
           >
-            {guide.title}
-          </h1>
-
-          {/* Meta Info */}
-          <div className="flex items-center gap-6 mb-8 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <span>📅</span>
-              <span>{new Date(guide.created_at).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</span>
-            </div>
-            {guide.bookmarked_by && guide.bookmarked_by.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span>🔖</span>
-                <span>{guide.bookmarked_by.length} bookmark{guide.bookmarked_by.length !== 1 ? 's' : ''}</span>
-              </div>
-            )}
+            {guide.category || 'General'}
+          </span>
+          <div className="flex items-center gap-4 text-slate-400 text-xs font-bold uppercase tracking-tighter">
+            <span className="flex items-center gap-1.5"><Calendar size={14} /> {new Date(guide.created_at).toLocaleDateString()}</span>
+            <span className="flex items-center gap-1.5"><Users size={14} /> {guide.bookmarked_by?.length || 0} Readers</span>
           </div>
+        </div>
 
-          {/* Content */}
-          <div className="bg-white/80 backdrop-blur rounded-2xl p-6 md:p-10">
-            <div className="prose prose-lg max-w-none">
-              <div className="text-gray-800 leading-relaxed whitespace-pre-line">
-                {guide.content}
-              </div>
-            </div>
+        <h1 className={`text-5xl md:text-7xl font-black mb-12 tracking-tighter ${world.fontFamily}`} style={{ color: world.colors.text }}>
+          {guide.title}
+        </h1>
 
-            {/* Attached Products Info */}
-            {guide.attached_products && guide.attached_products.length > 0 && (
-              <div className="mt-10 p-6 bg-blue-50 rounded-xl border border-blue-100">
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <span>🎁</span>
-                  <span>Related Products</span>
-                </h3>
-                <p className="text-sm text-gray-600">
-                  This guide references {guide.attached_products.length} product{guide.attached_products.length > 1 ? 's' : ''} available in {world.name}.
-                </p>
-                <button
-                  onClick={() => navigate(`/worlds/${worldName}`)}
-                  className="mt-4 base-button"
-                  style={{ 
-                    backgroundColor: world.colors.accent,
-                    color: '#FFFFFF'
-                  }}
-                >
-                  Browse Products
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Actions */}
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={handleBookmark}
-              disabled={bookmarkLoading}
-              className="base-button px-8"
-              style={{ 
-                backgroundColor: isBookmarked ? world.colors.accent : 'transparent',
-                border: `2px solid ${world.colors.accent}`,
-                color: isBookmarked ? '#FFFFFF' : world.colors.accent
-              }}
-            >
-              {bookmarkLoading ? 'Updating...' : isBookmarked ? '🔖 Bookmarked' : '📑 Bookmark This Guide'}
-            </button>
-          </div>
-
-          {/* Share Section */}
-          <div className="mt-12 p-6 bg-white/50 backdrop-blur rounded-xl text-center">
-            <h3 className="font-semibold mb-2">Found this guide helpful?</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Bookmark it to save for later or share it with others!
+        {/* Main Content Card */}
+        <div className="bg-white rounded-[3rem] p-8 md:p-16 shadow-xl shadow-black/5 border border-white/50 mb-12">
+          <div className="prose prose-slate prose-lg max-w-none">
+            <p className="text-xl text-slate-500 leading-relaxed font-medium mb-10 border-l-4 pl-6 border-slate-200 italic">
+              {guide.description || "A comprehensive deep-dive into the strategies and mechanics of this world."}
             </p>
-            <div className="flex justify-center gap-3">
-              <button 
-                className="base-button px-6 bg-gray-100 text-gray-700 hover:bg-gray-200"
-                onClick={() => alert('Share functionality coming soon!')}
-              >
-                Share
-              </button>
+            <div className="text-slate-800 leading-loose whitespace-pre-line font-medium">
+              {guide.content}
+            </div>
+          </div>
+
+          {/* Related Products CTA */}
+          {guide.attached_products?.length > 0 && (
+            <div className="mt-16 p-8 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4 text-center md:text-left">
+                <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-500">
+                  <Package size={32} />
+                </div>
+                <div>
+                  <h4 className="font-black text-slate-900">Unlock Related Tools</h4>
+                  <p className="text-sm text-slate-500 font-medium">This guide uses {guide.attached_products.length} specific assets.</p>
+                </div>
+              </div>
               <button
                 onClick={() => navigate(`/worlds/${worldName}`)}
-                className="base-button px-6"
-                style={{ 
-                  backgroundColor: world.colors.accent,
-                  color: '#FFFFFF'
-                }}
+                className="px-8 py-4 bg-white border-2 border-slate-200 rounded-2xl font-black text-slate-900 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-95"
               >
-                Explore More Guides
+                Browse Assets
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex flex-col items-center gap-6 py-12 border-t border-black/5 text-center">
+          <h3 className="text-2xl font-black text-slate-900">Knowledge is better shared.</h3>
+          <div className="flex gap-4">
+            <button className="flex items-center gap-2 px-8 py-4 bg-white rounded-2xl font-bold shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95">
+              <Share2 size={18} /> Share Guide
+            </button>
+            <button 
+              onClick={handleBookmark}
+              className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold shadow-lg hover:shadow-indigo-200 transition-all active:scale-95"
+              style={{ backgroundColor: world.colors.accent }}
+            >
+              {isBookmarked ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+              {isBookmarked ? 'Saved to Library' : 'Save for Later'}
+            </button>
           </div>
-        </article>
+        </div>
       </main>
     </div>
   )

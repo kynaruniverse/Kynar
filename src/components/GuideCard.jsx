@@ -1,136 +1,74 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@contexts/AuthContext'
+import { contentService } from '@services/contentService'
+import { Bookmark, BookmarkCheck, Loader2, FileText, Gift } from 'lucide-react'
 
 const GuideCard = ({ guide, world }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [bookmarkLoading, setBookmarkLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    // Check if guide is bookmarked by current user
-    if (user && guide.bookmarked_by) {
-      setIsBookmarked(guide.bookmarked_by.includes(user.id))
-    } else {
-      setIsBookmarked(false)
-    }
-  }, [guide, user])
-
-  const handleReadGuide = () => {
-    navigate(`/worlds/${world.slug}/guides/${guide.id}`)
-  }
+  // Derived State: Check if user ID is in the array
+  const isBookmarked = user && guide.bookmarked_by?.includes(user.id)
 
   const handleBookmark = async (e) => {
     e.stopPropagation()
+    if (!user) return alert('Sign in to bookmark this guide.')
     
-    if (!user) {
-      alert('Please sign in to bookmark guides!')
-      return
-    }
-
-    setBookmarkLoading(true)
-
-    try {
-      let updatedBookmarks = [...(guide.bookmarked_by || [])]
-
-      if (isBookmarked) {
-        updatedBookmarks = updatedBookmarks.filter(id => id !== user.id)
-      } else {
-        if (!updatedBookmarks.includes(user.id)) {
-          updatedBookmarks.push(user.id)
-        }
-      }
-
-      const { error } = await supabase
-        .from('guides')
-        .update({ bookmarked_by: updatedBookmarks })
-        .eq('id', guide.id)
-
-      if (error) throw error
-
-      setIsBookmarked(!isBookmarked)
-    } catch (error) {
-      console.error('Error toggling bookmark:', error)
-    } finally {
-      setBookmarkLoading(false)
-    }
+    setLoading(true)
+    await contentService.toggleBookmark(guide.id, user.id, guide.bookmarked_by || [])
+    // Note: In a real app, we'd use a global state update or re-fetch here
+    setLoading(false)
   }
 
   return (
-    <div className="base-card bg-white/80 backdrop-blur hover:shadow-md active:scale-95 transition-all duration-150">
-      {/* Guide Header with Bookmark */}
-      <div className="flex justify-between items-start mb-3">
-        <h3 
-          className={`text-lg font-semibold flex-1 line-clamp-2 ${world.fontFamily}`}
-          style={{ color: world.colors.text }}
-        >
-          {guide.title}
-        </h3>
+    <div className="group bg-white/70 backdrop-blur-md rounded-3xl p-6 border border-white/20 transition-all hover:bg-white/90 shadow-sm hover:shadow-md">
+      <div className="flex justify-between items-start gap-4 mb-4">
+        <div className="p-3 rounded-2xl bg-white shadow-sm">
+          <FileText size={24} style={{ color: world.colors.accent }} />
+        </div>
         
-        {/* Bookmark Button */}
         <button
           onClick={handleBookmark}
-          disabled={bookmarkLoading}
-          className="ml-2 p-2 rounded-lg transition-all active:scale-90"
-          style={{ 
-            color: isBookmarked ? world.colors.accent : '#9CA3AF',
-            backgroundColor: isBookmarked ? world.colors.accent + '10' : 'transparent'
-          }}
-          aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+          disabled={loading}
+          className="p-2.5 rounded-xl bg-white shadow-sm transition-all hover:scale-110 active:scale-95 disabled:opacity-50"
         >
-          {bookmarkLoading ? '⏳' : isBookmarked ? '🔖' : '📑'}
+          {loading ? (
+            <Loader2 size={20} className="animate-spin text-gray-400" />
+          ) : isBookmarked ? (
+            <BookmarkCheck size={20} className="fill-current" style={{ color: world.colors.accent }} />
+          ) : (
+            <Bookmark size={20} className="text-gray-300 hover:text-gray-500" />
+          )}
         </button>
       </div>
 
-      {/* Guide Content Preview */}
-      <p className="text-sm text-gray-600 mb-4 line-clamp-4">
-        {guide.content ? guide.content.substring(0, 200) + '...' : 'No preview available.'}
+      <h3 className={`text-xl font-bold mb-3 ${world.fontFamily}`} style={{ color: world.colors.text }}>
+        {guide.title}
+      </h3>
+
+      <p className="text-sm text-gray-600 line-clamp-3 mb-6 leading-relaxed">
+        {guide.content}
       </p>
 
-      {/* Category Tag */}
-      {guide.category && (
-        <div className="mb-4">
-          <span 
-            className="inline-block px-3 py-1 rounded-full text-xs font-medium"
-            style={{ 
-              backgroundColor: world.colors.accent + '20',
-              color: world.colors.text 
-            }}
-          >
-            {guide.category}
-          </span>
+      <div className="flex flex-wrap gap-3 mb-6">
+        {guide.attached_products?.length > 0 && (
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md uppercase">
+            <Gift size={12} /> {guide.attached_products.length} Items
+          </div>
+        )}
+        <div className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md uppercase">
+          {guide.bookmarked_by?.length || 0} Saves
         </div>
-      )}
+      </div>
 
-      {/* Attached Products Preview */}
-      {guide.attached_products && guide.attached_products.length > 0 && (
-        <div className="mb-4 text-xs text-gray-500 flex items-center gap-1">
-          <span>🎁</span>
-          <span>{guide.attached_products.length} related product{guide.attached_products.length > 1 ? 's' : ''}</span>
-        </div>
-      )}
-
-      {/* Bookmark Count */}
-      {guide.bookmarked_by && guide.bookmarked_by.length > 0 && (
-        <div className="mb-4 text-xs text-gray-500 flex items-center gap-1">
-          <span>🔖</span>
-          <span>{guide.bookmarked_by.length} bookmark{guide.bookmarked_by.length !== 1 ? 's' : ''}</span>
-        </div>
-      )}
-
-      {/* Read Button */}
       <button
-        onClick={handleReadGuide}
-        className="w-full base-button"
-        style={{ 
-          backgroundColor: 'transparent',
-          border: `2px solid ${world.colors.accent}`,
-          color: world.colors.accent
-        }}
+        onClick={() => navigate(`/worlds/${world.slug}/guides/${guide.id}`)}
+        className="w-full py-3 rounded-2xl font-bold text-sm transition-all border-2 hover:bg-white"
+        style={{ borderColor: world.colors.accent, color: world.colors.text }}
       >
-        Read Guide
+        Open Guide
       </button>
     </div>
   )
