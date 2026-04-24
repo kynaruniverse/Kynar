@@ -14,6 +14,7 @@ import {
 import IdentityCard from '@components/IdentityCard'
 import ShareActions from '@components/ShareActions'
 import AuthModal from '@components/AuthModal'
+import useDocumentMeta from '@lib/useDocumentMeta'
 
 const uuid = () =>
   (crypto?.randomUUID && crypto.randomUUID()) ||
@@ -22,6 +23,12 @@ const uuid = () =>
 const Quiz = () => {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
+
+  useDocumentMeta({
+    title: 'Find your world · 4 Worlds',
+    description: 'A 90-second alignment quiz reveals which world your taste belongs to.',
+    themeColor: '#08080c',
+  })
 
   const [step, setStep] = useState(0) // 0..N-1 = questions, N = result
   const [answers, setAnswers] = useState({}) // { [questionId]: optionId }

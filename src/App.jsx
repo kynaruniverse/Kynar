@@ -3,14 +3,10 @@ import { useEffect } from 'react'
 import { AuthProvider, useAuth } from '@contexts/AuthContext'
 import Navbar from '@components/Navbar'
 import HubPage from '@pages/HubPage'
-import WorldPage from '@pages/WorldPage'
-import ProductDetails from '@pages/ProductDetails'
-import GuideDetails from '@pages/GuideDetails'
-import UserLibrary from '@pages/UserLibrary'
-import SocialFeed from '@pages/SocialFeed'
 import Quiz from '@pages/Quiz'
 import Profile from '@pages/Profile'
 import SharePage from '@pages/SharePage'
+import NotFound from '@pages/NotFound'
 
 /**
  * Helper: ScrollToTop
@@ -30,64 +26,41 @@ const ScrollToTop = () => {
  */
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
-  if (loading) return null // Or a loading spinner
-  return user ? children : <HubPage /> 
+  if (loading) return null
+  return user ? children : <HubPage />
 }
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        {/* Utilities */}
         <ScrollToTop />
-        
-        {/* Global Layout Wrapper */}
+
         <div className="flex flex-col min-h-screen font-sans selection:bg-indigo-100 selection:text-indigo-900">
           <Navbar />
-          
+
           <main className="flex-grow">
             <Routes>
               {/* Public Entry Point */}
               <Route path="/" element={<HubPage />} />
 
-              {/* Onboarding / Identity */}
+              {/* Identity */}
               <Route path="/quiz" element={<Quiz />} />
-              <Route path="/me" element={<Profile self />} />
+              <Route
+                path="/me"
+                element={
+                  <ProtectedRoute>
+                    <Profile self />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/u/:username" element={<Profile />} />
               <Route path="/card/:username" element={<SharePage />} />
 
-              {/* Community Feed */}
-              <Route path="/social" element={<SocialFeed />} />
-              
-              {/* Dynamic World Routing */}
-              <Route path="/worlds/:worldName" element={<WorldPage />} />
-              
-              {/* Content Deep-Links */}
-              <Route 
-                path="/worlds/:worldName/products/:productId" 
-                element={<ProductDetails />} 
-              />
-              <Route 
-                path="/worlds/:worldName/guides/:guideId" 
-                element={<GuideDetails />} 
-              />
-              
-              {/* Private User Space */}
-              <Route 
-                path="/library" 
-                element={
-                  <ProtectedRoute>
-                    <UserLibrary />
-                  </ProtectedRoute>
-                } 
-              />
-
-              {/* 404 Fallback */}
-              <Route path="*" element={<HubPage />} />
+              {/* 404 — real fallback page (replaces silent redirect to Hub) */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
-
-          {/* Optional: Footer can go here */}
         </div>
       </BrowserRouter>
     </AuthProvider>

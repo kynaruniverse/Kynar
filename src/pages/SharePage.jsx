@@ -6,6 +6,7 @@ import { getProfileByUsername } from '@services/alignmentService'
 import { WORLD_CONFIG } from '@constants/worlds'
 import IdentityCard from '@components/IdentityCard'
 import ShareActions from '@components/ShareActions'
+import useDocumentMeta from '@lib/useDocumentMeta'
 
 /**
  * SharePage — /card/:username
@@ -40,6 +41,40 @@ const SharePage = () => {
     }
   }, [username])
 
+  // Compute meta values eagerly so the hook can be called unconditionally
+  // (rules of hooks). Falls back to safe placeholders during loading / 404.
+  const alignment = profileData?.alignment ?? null
+  const primaryWorld = profileData?.primaryWorld ?? null
+  const displayName = profileData?.displayName ?? null
+  const hasAlignment = !!alignment && !!primaryWorld
+  const primary = primaryWorld ? WORLD_CONFIG[primaryWorld] : null
+
+  const shareTitle = hasAlignment
+    ? `${displayName || `@${username}`} belongs to ${primary?.name} · 4 Worlds`
+    : `@${username} · 4 Worlds`
+  const shareDesc = hasAlignment
+    ? `${primary?.tagline} See @${username}'s alignment across all four worlds and find yours.`
+    : `View ${displayName || `@${username}`}'s identity card on 4 Worlds.`
+  const shareUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/card/${username}`
+      : undefined
+  const shareImage =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/og-default.svg`
+      : undefined
+
+  // Per-page meta + Open Graph. Crawlers that execute JS (Twitter, Discord)
+  // will read these; others fall back to the index.html defaults.
+  useDocumentMeta({
+    title: shareTitle,
+    description: shareDesc,
+    url: shareUrl,
+    image: shareImage,
+    themeColor: '#06060b',
+    type: 'profile',
+  })
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#06060b] text-white/60 text-sm font-bold">
@@ -68,10 +103,6 @@ const SharePage = () => {
       </div>
     )
   }
-
-  const { alignment, primaryWorld, displayName } = profileData
-  const hasAlignment = !!alignment && !!primaryWorld
-  const primary = primaryWorld ? WORLD_CONFIG[primaryWorld] : null
 
   if (!hasAlignment) {
     return (
