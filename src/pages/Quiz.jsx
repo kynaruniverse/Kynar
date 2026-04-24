@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, ArrowRight, Sparkles, Loader2 } from 'lucide-react'
@@ -12,6 +12,7 @@ import {
   stashPendingAlignment,
 } from '@services/alignmentService'
 import IdentityCard from '@components/IdentityCard'
+import ShareActions from '@components/ShareActions'
 import AuthModal from '@components/AuthModal'
 
 const uuid = () =>
@@ -265,6 +266,7 @@ const ResultView = ({
   onViewProfile,
   onExplore,
 }) => {
+  const cardRef = useRef(null)
   if (!alignment) return null
   const primary = WORLD_CONFIG[alignment.primary_world]
   return (
@@ -283,7 +285,7 @@ const ResultView = ({
           You belong to{' '}
           <span style={{ color: primary?.colors.primary }}>{primary?.name}</span>.
         </h1>
-        <p className="text-base md:text-lg text-white/60 leading-relaxed mb-10 max-w-md">
+        <p className="text-base md:text-lg text-white/60 leading-relaxed mb-8 max-w-md">
           {primary?.description} Your card evolves as your taste does — return
           tomorrow for your next ritual.
         </p>
@@ -324,14 +326,32 @@ const ResultView = ({
             Explore the Worlds
           </button>
         </div>
+
+        {/* Share is gated on having a username (i.e. the user has signed up
+            and the alignment has been flushed). For anonymous users we lead
+            with "Claim my identity" first. */}
+        {user && username && (
+          <div className="mt-8">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 mb-3">
+              Share your card
+            </p>
+            <ShareActions
+              cardRef={cardRef}
+              username={username}
+              variant="dark"
+            />
+          </div>
+        )}
       </div>
 
       {/* Card */}
       <div className="order-1 md:order-2">
         <IdentityCard
+          ref={cardRef}
           username={username || 'you'}
           alignment={alignment}
           primaryWorld={alignment.primary_world}
+          size="md"
         />
       </div>
     </motion.div>
