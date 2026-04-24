@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import { supabase } from '@lib/supabase'
 import { userService } from '@services/userService'
+import { flushPendingAlignment } from '@services/alignmentService'
 
 const AuthContext = createContext(null)
 
@@ -45,6 +46,9 @@ export const AuthProvider = ({ children }) => {
       setUser(currentUser)
       
       if (event === 'SIGNED_IN') {
+        // Flush any anonymous quiz attempt taken before sign-in so the user
+        // walks away with their identity already saved on first login.
+        if (currentUser?.id) await flushPendingAlignment(currentUser.id)
         await syncUserProfile(currentUser?.id)
       } else if (event === 'SIGNED_OUT') {
         setProfile(null)

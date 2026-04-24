@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '@contexts/AuthContext'
 import { getWorldBySlug } from '@constants/worlds'
-import { User, LogOut, Library, LayoutGrid, ChevronDown, Sparkles } from 'lucide-react'
+import { User, LogOut, Library, LayoutGrid, ChevronDown, Sparkles, Compass } from 'lucide-react'
 import AuthModal from '@components/AuthModal'
 import { clsx } from 'clsx'
 
@@ -19,8 +19,9 @@ const Navbar = () => {
   // Derived state for world-specific styling
   const world = worldName ? getWorldBySlug(worldName) : null
 
-  // Hide Navbar on HubPage for that immersive 4-world landing feel
-  if (pathname === '/') return null
+  // Hide Navbar on HubPage for that immersive 4-world landing feel,
+  // and on the full-screen onboarding quiz.
+  if (pathname === '/' || pathname === '/quiz') return null
 
   const handleSignOut = async () => {
     await signOut()
@@ -60,6 +61,11 @@ const Navbar = () => {
                 <NavButton onClick={() => navigate('/library')} active={pathname === '/library'}>
                   <Library size={18} /> My Vault
                 </NavButton>
+                {user && (
+                  <NavButton onClick={() => navigate('/me')} active={pathname === '/me'}>
+                    <Compass size={18} /> Identity
+                  </NavButton>
+                )}
               </div>
             </div>
 
@@ -84,6 +90,9 @@ const Navbar = () => {
                         <p className="text-sm font-black text-slate-900 truncate">{profile?.username || 'Explorer'}</p>
                       </div>
                       
+                      <MenuLink onClick={() => { navigate('/me'); setShowUserMenu(false); }} icon={Compass}>
+                        My Identity
+                      </MenuLink>
                       <MenuLink onClick={() => { navigate('/library'); setShowUserMenu(false); }} icon={Library}>
                         My Library
                       </MenuLink>

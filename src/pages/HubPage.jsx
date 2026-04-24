@@ -1,12 +1,32 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from '@contexts/AuthContext'
 import { WORLD_CONFIG } from '@constants/worlds'
 import WorldCard from '@components/WorldCard'
-import { Sparkles, Users, Library, Shield } from 'lucide-react'
+import { Sparkles, Users, Library, Shield, Compass, ArrowRight } from 'lucide-react'
+import { getAlignment } from '@services/alignmentService'
 
 const HubPage = () => {
+  const navigate = useNavigate()
   const { user, profile } = useAuth()
+  const [alignment, setAlignment] = useState(null)
 
   const worlds = Object.values(WORLD_CONFIG)
+  const primary = alignment?.primary_world ? WORLD_CONFIG[alignment.primary_world] : null
+
+  useEffect(() => {
+    if (!user) return setAlignment(null)
+    let cancelled = false
+    getAlignment(user.id).then((a) => {
+      if (!cancelled) setAlignment(a)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  const showQuizCTA = !user || !alignment
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -18,22 +38,59 @@ const HubPage = () => {
               <Sparkles size={14} /> The Multiverse is Open
             </div>
             <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter mb-6">
-              Explore the <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">4 Worlds.</span>
+              Which world are{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
+                you?
+              </span>
             </h1>
             <p className="text-xl text-slate-500 font-medium leading-relaxed mb-10">
-              A curated ecosystem of digital assets, knowledge guides, and community interaction. Choose your path and start building.
+              Four living biomes. One identity. Take the 90-second alignment quiz
+              and discover the world your taste actually belongs to.
             </p>
-            
-            {user && (
-              <div className="flex items-center gap-4 p-4 bg-white rounded-3xl border border-slate-100 shadow-sm w-fit">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-bold">
-                  {profile?.username?.[0] || user.email[0].toUpperCase()}
+
+            {showQuizCTA ? (
+              <motion.button
+                onClick={() => navigate('/quiz')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="group inline-flex items-center gap-3 px-7 py-5 rounded-full bg-slate-900 text-white text-base font-black shadow-2xl shadow-slate-200 hover:shadow-indigo-200 transition-shadow"
+              >
+                <Compass size={18} />
+                Find my world
+                <ArrowRight
+                  size={18}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={() => navigate('/me')}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.01 }}
+                className="group flex items-center gap-4 p-2 pr-6 bg-white rounded-full border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+                  style={{
+                    background: `linear-gradient(135deg, ${primary?.colors.primary}33, ${primary?.colors.secondary}33)`,
+                  }}
+                >
+                  {primary?.icon}
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Welcome back,</p>
-                  <p className="text-lg font-black text-slate-900">{profile?.username || 'Explorer'}</p>
+                <div className="text-left">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    @{profile?.username || 'you'} • {primary?.name}
+                  </p>
+                  <p className="text-sm font-black text-slate-900">
+                    View my identity
+                  </p>
                 </div>
-              </div>
+                <ArrowRight
+                  size={16}
+                  className="text-slate-400 transition-transform group-hover:translate-x-1"
+                />
+              </motion.button>
             )}
           </div>
         </div>
@@ -54,20 +111,20 @@ const HubPage = () => {
       {/* Feature Section */}
       <section className="max-w-7xl mx-auto px-6 pb-32">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 border-t border-slate-200 pt-20">
-          <FeatureItem 
-            icon={Users} 
-            title="Unified Community" 
-            desc="One social feed to rule them all. Share insights across every world."
+          <FeatureItem
+            icon={Compass}
+            title="Your World, Discovered"
+            desc="A 7-question quiz reveals your alignment across all four worlds."
           />
-          <FeatureItem 
-            icon={Library} 
-            title="Personal Vault" 
-            desc="Every purchase and bookmark is synced to your cross-world library."
+          <FeatureItem
+            icon={Users}
+            title="One Identity, Four Tribes"
+            desc="Your card evolves with your taste. Share it. Defend it."
           />
-          <FeatureItem 
-            icon={Shield} 
-            title="Secure Access" 
-            desc="Powered by Supabase and LemonSqueezy for industry-grade safety."
+          <FeatureItem
+            icon={Library}
+            title="Personal Vault"
+            desc="Every save and bookmark is synced to your cross-world library."
           />
         </div>
       </section>

@@ -8,6 +8,8 @@ import ProductDetails from '@pages/ProductDetails'
 import GuideDetails from '@pages/GuideDetails'
 import UserLibrary from '@pages/UserLibrary'
 import SocialFeed from '@pages/SocialFeed'
+import Quiz from '@pages/Quiz'
+import Profile from '@pages/Profile'
 
 /**
  * Helper: ScrollToTop
@@ -46,7 +48,12 @@ function App() {
             <Routes>
               {/* Public Entry Point */}
               <Route path="/" element={<HubPage />} />
-              
+
+              {/* Onboarding / Identity */}
+              <Route path="/quiz" element={<Quiz />} />
+              <Route path="/me" element={<Profile self />} />
+              <Route path="/u/:username" element={<Profile />} />
+
               {/* Community Feed */}
               <Route path="/social" element={<SocialFeed />} />
               
