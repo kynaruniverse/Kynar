@@ -12,12 +12,17 @@ export default defineConfig({
       '@pages': path.resolve(__dirname, './src/pages'),
       '@constants': path.resolve(__dirname, './src/constants'),
       '@contexts': path.resolve(__dirname, './src/contexts'),
+      '@services': path.resolve(__dirname, './src/services'),
     },
   },
   server: {
-    port: 3000,
-    host: true,
-    strictPort: true, // Fails if port 3000 is taken, preventing accidental dev on wrong port
+    port: 5000,
+    host: '0.0.0.0',
+    strictPort: true,
+    allowedHosts: true,
+    hmr: {
+      clientPort: 443,
+    },
   },
   build: {
     rollupOptions: {
