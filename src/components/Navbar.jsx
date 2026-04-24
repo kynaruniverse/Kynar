@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '@contexts/AuthContext'
 import { getWorldBySlug } from '@constants/worlds'
-import { User, LogOut, Library, LayoutGrid, ChevronDown, Sparkles, Compass } from 'lucide-react'
+import { LogOut, ChevronDown, Compass } from 'lucide-react'
 import AuthModal from '@components/AuthModal'
 import { clsx } from 'clsx'
 
@@ -60,14 +60,9 @@ const Navbar = () => {
                 <span className="hidden sm:inline-block">Worlds</span>
               </button>
 
-              {/* Desktop Nav */}
+              {/* Desktop Nav — Community / Vault are intentionally hidden
+                  until those subsystems are built (Phase 2+). */}
               <div className="hidden md:flex items-center gap-1">
-                <NavButton onClick={() => navigate('/social')} active={pathname === '/social'}>
-                  <LayoutGrid size={18} /> Community
-                </NavButton>
-                <NavButton onClick={() => navigate('/library')} active={pathname === '/library'}>
-                  <Library size={18} /> My Vault
-                </NavButton>
                 {user && (
                   <NavButton onClick={() => navigate('/me')} active={pathname === '/me'}>
                     <Compass size={18} /> Identity
@@ -100,13 +95,7 @@ const Navbar = () => {
                       <MenuLink onClick={() => { navigate('/me'); setShowUserMenu(false); }} icon={Compass}>
                         My Identity
                       </MenuLink>
-                      <MenuLink onClick={() => { navigate('/library'); setShowUserMenu(false); }} icon={Library}>
-                        My Library
-                      </MenuLink>
-                      <MenuLink onClick={() => { navigate('/social'); setShowUserMenu(false); }} icon={LayoutGrid}>
-                        Community Feed
-                      </MenuLink>
-                      
+
                       <div className="mt-2 pt-2 border-t border-slate-50">
                         <MenuLink onClick={handleSignOut} icon={LogOut} variant="danger">
                           Sign Out

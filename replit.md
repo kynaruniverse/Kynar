@@ -9,12 +9,14 @@ A React + Vite SPA that doubles as a **personal identity product**. Users take a
 - **Backend**: Supabase (auth + Postgres + RLS); env vars in `.env`
 
 ## Project Structure
-- `src/pages` — route components (HubPage, Quiz, Profile, WorldPage, ProductDetails, GuideDetails, SocialFeed, UserLibrary)
-- `src/components` — UI building blocks (IdentityCard, WorldCard, Navbar, AuthModal, …)
-- `src/services` — Supabase data layer (`alignmentService`, `userService`, `contentService`, `socialService`)
+- `src/pages` — route components (HubPage, Quiz, Profile, SharePage, NotFound)
+- `src/components` — UI (IdentityCard, WorldCard, Navbar, AuthModal, ShareActions, EditProfileModal, ErrorBoundary)
+- `src/services` — Supabase data layer (`alignmentService`, `userService`)
+- `src/lib` — small utilities (`supabase`, `useDocumentMeta`)
 - `src/contexts/AuthContext.jsx` — auth + auto-flush of pending anonymous quiz
 - `src/constants/worlds.js` — world theme tokens
 - `src/constants/quiz.js` — quiz questions, options, weights
+- `public/` — favicon + default Open Graph image
 
 Path aliases: `@`, `@components`, `@lib`, `@pages`, `@constants`, `@contexts`, `@services`.
 
@@ -62,7 +64,24 @@ Path aliases: `@`, `@components`, `@lib`, `@pages`, `@constants`, `@contexts`, `
 **Dependency added**: `html-to-image`
 
 ### REQUIRED database migration
-Run `supabase_phase1_identity.sql` in the Supabase Dashboard → SQL Editor before signing in. Idempotent. Without it, quiz submission for signed-in users will fail (anonymous flow still works for previewing the UX).
+Run `supabase_phase1_identity.sql` in the Supabase Dashboard → SQL Editor before signing in. Idempotent. Without it, quiz submission for signed-in users will fail (anonymous flow still works for previewing the UX). **No new SQL is required for Phase 2.**
+
+## Phase 2 — Production Polish (shipped)
+
+**What's in**
+- **Brand chrome**: SVG favicon, default `og-default.svg` (1200×630), `theme-color #0b0b14`, full Open Graph + Twitter Card defaults baked into `index.html`
+- **Per-page meta**: `useDocumentMeta` hook updates `<title>`, OG, and Twitter tags per route and restores on unmount. SharePage emits per-user titles like *"@user belongs to Tools Realm"*
+- **404**: Real `NotFound` page replaces the silent redirect-to-Hub catch-all
+- **ErrorBoundary**: Top-level boundary in `main.jsx` so render errors never blank the app; prints stack in dev only
+- **EditProfileModal**: Wired into `/me` only; updates `display_name` + `bio` via RLS-safe `userService.updateProfile()`; calls `refreshProfile()` on save
+- **Routing hygiene**: Removed routes for `/social`, `/library`, `/worlds/*`, `/worlds/*/products/*`, `/worlds/*/guides/*`. Removed orphan pages (`SocialFeed`, `UserLibrary`, `WorldPage`, `ProductDetails`, `GuideDetails`) and components (`PostCard`, `GuideCard`, `CreatePostModal`, `ProductCard`) that referenced unbuilt tables
+- **Service hygiene**: Trimmed `userService` down to `getUserProfile` + `updateProfile`. Deleted `contentService` and `socialService`
+- **Navbar**: Community + Vault links removed (subsystems not built)
+- **WorldCard**: No longer routes to broken `/worlds/:slug`; routes to `/me` (if aligned) or `/quiz` (if not). Adds `isPrimary` ring to highlight the user's primary world on the Hub
+
+**Known limitations (by design)**
+- **OG previews in iMessage / Slack / Facebook**: These crawlers don't run JS, so per-user OG tags only apply to JS-aware unfurlers (Twitter, Discord, Telegram). For true per-user previews everywhere we need server-rendering — Vercel Edge Function or full SSR. The `index.html` defaults handle the fallback gracefully.
+- **OG default is SVG**: SVG OG works on Discord but is unreliable elsewhere. For best results, regenerate `public/og-default.svg` as `og-default.png` (1200×630) and update the four `<meta>` references in `index.html`.
 
 ## Replit Setup
 - Dev server: port `5000`, host `0.0.0.0`, `allowedHosts: true` for the proxy

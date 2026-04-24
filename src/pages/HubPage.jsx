@@ -4,13 +4,20 @@ import { motion } from 'framer-motion'
 import { useAuth } from '@contexts/AuthContext'
 import { WORLD_CONFIG } from '@constants/worlds'
 import WorldCard from '@components/WorldCard'
-import { Sparkles, Users, Library, Shield, Compass, ArrowRight } from 'lucide-react'
+import { Sparkles, Users, Library, Compass, ArrowRight } from 'lucide-react'
 import { getAlignment } from '@services/alignmentService'
+import useDocumentMeta from '@lib/useDocumentMeta'
 
 const HubPage = () => {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
   const [alignment, setAlignment] = useState(null)
+
+  useDocumentMeta({
+    title: '4 Worlds · Which world are you?',
+    description:
+      'A 90-second alignment quiz reveals which of the four worlds your taste belongs to. Claim your Identity Card and share it.',
+  })
 
   const worlds = Object.values(WORLD_CONFIG)
   const primary = alignment?.primary_world ? WORLD_CONFIG[alignment.primary_world] : null
@@ -103,7 +110,11 @@ const HubPage = () => {
       <main className="max-w-7xl mx-auto px-6 -mt-16 mb-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {worlds.map((world) => (
-            <WorldCard key={world.slug} world={world} />
+            <WorldCard
+              key={world.slug}
+              world={world}
+              isPrimary={alignment?.primary_world === world.name}
+            />
           ))}
         </div>
       </main>
