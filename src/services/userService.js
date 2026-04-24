@@ -25,24 +25,9 @@ export const userService = {
     }
   },
 
-  /**
-   * Creates a new entry in the 'users' table upon sign-up.
-   */
-  async createProfile(id, email, username) {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert([{ id, email, username, saved_products: [] }])
-        .select()
-        .single()
-        
-      if (error) throw error
-      return { data, error: null }
-    } catch (err) {
-      console.error('Error creating profile:', err.message)
-      return { data: null, error: err }
-    }
-  },
+  // NOTE: profile creation is handled in Postgres by the
+  // `on_auth_user_created` trigger (see supabase_phase1_identity.sql).
+  // No client-side createProfile is needed.
 
   /**
    * Fetches the full content for a user's library (Products + Bookmarks).

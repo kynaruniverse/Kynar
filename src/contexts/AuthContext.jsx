@@ -62,16 +62,15 @@ export const AuthProvider = ({ children }) => {
 
   const authActions = {
     signUp: async (email, password, username) => {
+      // The public.users row is created automatically by the
+      // `on_auth_user_created` trigger in Supabase, which reads the
+      // `username` out of the auth metadata below. No client-side insert
+      // is needed (and would conflict with the trigger).
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { username } }
       })
-
-      if (!error && data.user) {
-        // Use our service layer instead of direct DB calls here
-        await userService.createProfile(data.user.id, email, username)
-      }
       return { data, error }
     },
 
