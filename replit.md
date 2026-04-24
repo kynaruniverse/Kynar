@@ -33,7 +33,33 @@ Path aliases: `@`, `@components`, `@lib`, `@pages`, `@constants`, `@contexts`, `
 5. Result screen shows the **IdentityCard** (animated, world-tinted)
 6. `/me` (private) and `/u/:username` (public) render the profile + card
 
-**Routes added**: `/quiz`, `/me`, `/u/:username`
+**Routes added**: `/quiz`, `/me`, `/u/:username`, `/card/:username`
+
+## Phase 1.1 — Identity Card V2 + Sharing (shipped)
+
+**IdentityCard** redesigned as a "shareable artifact" (Spotify-Wrapped feel):
+- Primary world dominates with giant ghost glyph + bold stacked-word headline
+- Single dominance-percent stat (e.g. "62%") replaces 4 equal bars
+- Stacked single-bar **spectrum** + legend shows the full alignment at a glance
+- Issued-on date + handle as footer "passport" details
+- `forwardRef` so the DOM node can be captured by `html-to-image`
+- New `size="share"` variant: poster-sized 4:5 aspect ratio used on the share page
+
+**ShareActions** (`src/components/ShareActions.jsx`):
+- Copy share link (`/card/:username`) — uses Clipboard API with textarea fallback
+- Download as PNG — client-side capture via `html-to-image` at 2x pixel ratio
+- `variant="light"` (profile) and `variant="dark"` (quiz, share page)
+
+**SharePage** (`/card/:username`):
+- Distraction-free dark page; navbar hidden via Navbar's pathname guard
+- Background tinted by user's primary world
+- CTA at the bottom invites visitors to take the quiz themselves
+
+**Entry points**:
+- `/me` profile shows ShareActions + "Open share page" link
+- Quiz result screen shows ShareActions once user has signed in (has a username)
+
+**Dependency added**: `html-to-image`
 
 ### REQUIRED database migration
 Run `supabase_phase1_identity.sql` in the Supabase Dashboard → SQL Editor before signing in. Idempotent. Without it, quiz submission for signed-in users will fail (anonymous flow still works for previewing the UX).

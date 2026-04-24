@@ -10,6 +10,7 @@ import UserLibrary from '@pages/UserLibrary'
 import SocialFeed from '@pages/SocialFeed'
 import Quiz from '@pages/Quiz'
 import Profile from '@pages/Profile'
+import SharePage from '@pages/SharePage'
 
 /**
  * Helper: ScrollToTop
@@ -53,6 +54,7 @@ function App() {
               <Route path="/quiz" element={<Quiz />} />
               <Route path="/me" element={<Profile self />} />
               <Route path="/u/:username" element={<Profile />} />
+              <Route path="/card/:username" element={<SharePage />} />
 
               {/* Community Feed */}
               <Route path="/social" element={<SocialFeed />} />

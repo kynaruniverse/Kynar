@@ -20,8 +20,15 @@ const Navbar = () => {
   const world = worldName ? getWorldBySlug(worldName) : null
 
   // Hide Navbar on HubPage for that immersive 4-world landing feel,
-  // and on the full-screen onboarding quiz.
-  if (pathname === '/' || pathname === '/quiz') return null
+  // on the full-screen onboarding quiz, and on the share/card page
+  // (which is designed to be a distraction-free shareable artifact).
+  if (
+    pathname === '/' ||
+    pathname === '/quiz' ||
+    pathname.startsWith('/card/')
+  ) {
+    return null
+  }
 
   const handleSignOut = async () => {
     await signOut()

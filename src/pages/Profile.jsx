@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Compass, Sparkles } from 'lucide-react'
+import { ArrowLeft, Compass, ExternalLink, Sparkles } from 'lucide-react'
 import { useAuth } from '@contexts/AuthContext'
 import { getProfileByUsername } from '@services/alignmentService'
 import { WORLD_CONFIG } from '@constants/worlds'
 import IdentityCard from '@components/IdentityCard'
+import ShareActions from '@components/ShareActions'
 
 /**
  * Profile
@@ -16,6 +17,7 @@ const Profile = ({ self = false }) => {
   const navigate = useNavigate()
   const { username: routeUsername } = useParams()
   const { user, profile, loading: authLoading } = useAuth()
+  const cardRef = useRef(null)
 
   const [profileData, setProfileData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -158,6 +160,23 @@ const Profile = ({ self = false }) => {
             </div>
           )}
 
+          {/* Share controls — only render when there is something to share */}
+          {hasAlignment && (
+            <div className="mt-10">
+              <ShareActions
+                cardRef={cardRef}
+                username={username}
+                variant="light"
+              />
+              <button
+                onClick={() => navigate(`/card/${username}`)}
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                Open share page <ExternalLink size={12} />
+              </button>
+            </div>
+          )}
+
           {self && hasAlignment && (
             <button
               onClick={() => navigate('/quiz')}
@@ -172,9 +191,11 @@ const Profile = ({ self = false }) => {
         {hasAlignment && (
           <div className="md:sticky md:top-24">
             <IdentityCard
+              ref={cardRef}
               username={username}
               alignment={alignment}
               primaryWorld={primaryWorld}
+              size="md"
             />
           </div>
         )}
